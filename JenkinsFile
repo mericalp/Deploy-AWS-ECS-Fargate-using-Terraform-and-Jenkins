@@ -1,0 +1,65 @@
+pipeline {
+    agent any
+    environment {
+        DOCKER_HUB_USERNAME = "credentials('mericalp').username"
+        DOCKER_HUB_PASSWORD = "credentials('dckr_pat_VH_jdCgh3Ubdb9PrtkMAPrAUTjs').password"
+        DOCKER_HUB_IMAGE_NAME = 'mericalp/mern-stack'
+        IMAGE_TAG = "v${env.BUILD_NUMBER}"
+    }
+    
+    stages {
+        stage('Checking Docker version') {
+            steps {
+                sh 'docker -v'
+            }
+        }
+       
+        stage('Login to Docker Hub') {      	
+            steps{                       	
+                sh 'docker login -u mericalp -p dckr_pat_VH_jdCgh3Ubdb9PrtkMAPrAUTjs'                		
+                echo 'Login Completed'      
+            }           
+        }  
+      
+
+        stage('Build and Push to Docker Hub') {
+            steps {
+                dir('/var/jenkins_home/workspace/mern-stack/mern-stack-ci-cd-fargate') {
+                    sh "docker build -t mericalp/mern-stack ."
+                    sh "docker tag mericalp/mern-stack:latest mericalp/mern-stack:lts"
+                    sh "docker push mericalp/mern-stack:lts"
+                }
+            }
+        }
+         stage('Terraform Init') {
+            steps {
+                // Terraform çalışma dizini belirleme
+                dir('/var/jenkins_home/workspace/mern-stack/mern-stack-ci-cd-fargate/tf') {
+                    // Terraform Init komutunu çalıştırma
+                    sh 'terraform init'
+                }
+            }
+        }
+        
+        stage('Terraform Plan') {
+            steps {
+                // Terraform çalışma dizini belirleme
+                dir('tf') {
+                    // Terraform Plan komutunu çalıştırma
+                    sh 'terraform plan'
+                }
+            }
+        }
+        
+        // stage('Terraform Apply') {
+        //     steps {
+        //         // Terraform çalışma dizini belirleme
+        //         dir('tf') {
+        //             // Terraform Apply komutunu çalıştırma
+        //             sh 'terraform apply -auto-approve'
+        //         }
+        //     }
+        // }
+        
+    }
+}
